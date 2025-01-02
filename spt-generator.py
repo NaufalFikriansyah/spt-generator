@@ -28,17 +28,14 @@ def set_font(run, font_name="Arial", font_size=12, font_color=(0, 0, 0), bold=Fa
     run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
 
 def generate_docx(data, signer, task_details, output_path):
-    # Load the template
     template = Document("SPT_TEMPLATE.docx")
 
-    # Replace placeholders
     for paragraph in template.paragraphs:
         if "{date}" in paragraph.text:
             paragraph.text = paragraph.text.replace("{date}", datetime.now().strftime("%d %B %Y"))
         for run in paragraph.runs:
-            set_font(run)  # Apply font to paragraph text
+            set_font(run)  
 
-    # Fill data in the appropriate table
     tables = template.tables
 
     # Table 1: Header information (signer details)
@@ -52,11 +49,11 @@ def generate_docx(data, signer, task_details, output_path):
     ]
 
     for i, value in enumerate(header_data):
-        if len(header_table.rows[i].cells) > 1:  # Ensure sufficient columns
+        if len(header_table.rows[i].cells) > 1: 
             cell = header_table.cell(i, 2)
             cell.text = value
             for run in cell.paragraphs[0].runs:
-                set_font(run, bold=(i == 0))  # Apply bold font only for signer['name']
+                set_font(run, bold=(i == 0))  
 
     # Table 2: Assignments (dynamic member list)
     assignments_table = tables[1]
@@ -79,7 +76,7 @@ def generate_docx(data, signer, task_details, output_path):
             else:
                 row = assignments_table.add_row().cells
             
-            row[0].text = str(row_idx + 1) if field_idx == 0 else ""  # Only the first row gets the number
+            row[0].text = str(row_idx + 1) if field_idx == 0 else "" 
             row[1].text = field_names_translated[field_idx]
             row[2].text = ":"
             row[3].text = member[field_name]
@@ -87,14 +84,10 @@ def generate_docx(data, signer, task_details, output_path):
                 row[3].text = member[field_name].title()  # Capitalize each word for names
             else:
                 row[3].text = member[field_name]
-            
-            # Center align the first column of the row
             paragraph1 = row[0].paragraphs[0]
             paragraph1.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
             paragraph2 = row[2].paragraphs[0]
             paragraph2.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-           
-
             for cell in row:
                 for paragraph in cell.paragraphs:
                     paragraph.paragraph_format.line_spacing = Pt(12)  # Line spacing
@@ -106,7 +99,6 @@ def generate_docx(data, signer, task_details, output_path):
 
             current_row_idx += 1
 
-        # Add one empty row for separation if another member exists
         if row_idx < len(data) - 1:
             if current_row_idx < len(assignments_table.rows):
                 row = assignments_table.rows[current_row_idx].cells
@@ -123,8 +115,6 @@ def generate_docx(data, signer, task_details, output_path):
     task_table.cell(2, 2).text = task_details["lokasi"]
     task_table.cell(3, 2).text = task_details["tanggal_berangkat"]
     task_table.cell(4, 2).text = task_details["sumber_dana"]
-
-    # Apply font settings to task table
     for row in task_table.rows:
         for cell in row.cells:
             for run in cell.paragraphs[0].runs:
@@ -142,7 +132,6 @@ def generate_docx(data, signer, task_details, output_path):
             for run in cell.paragraphs[0].runs:
                 set_font(run)
 
-    # Save the generated document
     template.save(output_path)
 
 def save_doc():
@@ -161,7 +150,6 @@ def save_doc():
         messagebox.showerror("Error", "Selected signer not found in members list!")
         return
 
-    # Collect task details
     task_details = {
         "tugas": task_entry.get(),
         "lama_perjalanan": duration_entry.get(),
@@ -190,12 +178,10 @@ def open_add_members_window():
             return
 
         try:
-            # Fetch data from the API
             response = requests.get("http://202.90.198.220/api/sdm/sdm-csv.bmkg")
             response.raise_for_status()
             data = response.text.splitlines()
 
-            # Filter results by query
             results = []
             for line in data:
                 fields = line.split(";")
@@ -212,12 +198,10 @@ def open_add_members_window():
                 messagebox.showinfo("No Results", "No matching members found.")
                 return
 
-            # Show results in a listbox for selection
             result_list.delete(0, "end")
             for idx, member in enumerate(results):
                 result_list.insert("end", f"{member['name']} ({member['nip']})")
 
-            # Store results globally for access during addition
             global search_results
             search_results = results
         except requests.RequestException as e:
@@ -236,28 +220,22 @@ def open_add_members_window():
 
         save_members()
         add_window.destroy()
-
     # Create a new window for adding members
     add_window = tk.Toplevel(root)
     add_window.title("Add Member from API")
     add_window.geometry("500x400")
-
     frame = ttk.Frame(add_window)
     frame.grid(pady=10, padx=10)
-
     # Search section
     ttk.Label(frame, text="Search Name:").grid(row=0, column=0, sticky="w")
     search_entry = ttk.Entry(frame, width=40)
     search_entry.grid(row=0, column=1, pady=5)
-
     search_button = ttk.Button(frame, text="Search", command=search_and_add_member)
     search_button.grid(row=0, column=2, padx=5)
-
     # Results section
     ttk.Label(frame, text="Results:").grid(row=1, column=0, sticky="w", pady=10)
     result_list = tk.Listbox(frame, height=10, width=60, selectmode="multiple")
     result_list.grid(row=2, column=0, columnspan=3, pady=5)
-
     add_button = ttk.Button(frame, text="Add Selected", command=add_selected_member)
     add_button.grid(row=3, column=0, columnspan=3, pady=10)
 
@@ -266,7 +244,6 @@ def delete_members():
     if not selected_indices:
         messagebox.showerror("Error", "No members selected for deletion!")
         return
-
     for idx in reversed(selected_indices):
         members_list.delete(idx)
         del members[idx]
@@ -274,14 +251,10 @@ def delete_members():
     save_members()
     messagebox.showinfo("Success", "Selected members have been deleted.")
 
-# Initialize the main window
 root = tk.Tk()
 root.title("Surat Tugas Generator")
-
-# Member list and data storage
 members = load_members()
 
-# Create the main UI layout
 # 1. "Yang Bertanda Tangan" Section
 ttk.Label(root, text="Yang Bertanda Tangan:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
 signer_dropdown = ttk.Combobox(root, values=[member["name"] for member in members], state="readonly", width=50)
