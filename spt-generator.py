@@ -93,9 +93,12 @@ def generate_docx(data, signer, task_details, output_path):
             #set font
             for cell in row:
                 for paragraph in cell.paragraphs:
-                    paragraph.paragraph_format.line_spacing = Pt(12)  
-                for run in cell.paragraphs[0].runs:
-                    set_font(run)
+                    paragraph.paragraph_format.line_spacing = Pt(12)  # Line spacing
+                    paragraph.paragraph_format.space_before = Pt(0)  # Space before paragraph
+                    paragraph.paragraph_format.space_after = Pt(0)  # Space after paragraph
+                for run in paragraph.runs:
+                    is_name_field = field_name == "name" and cell is row[3]
+                    set_font(run, bold=is_name_field)
 
             current_row_idx += 1
 
