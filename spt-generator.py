@@ -20,7 +20,6 @@ def save_members():
         json.dump(members, file, indent=4)
 
 def set_font(run, font_name="Arial", font_size=12, font_color=(0, 0, 0), bold=False):
-    """Sets font name, size, color, and boldness for a given run."""
     run.font.name = font_name
     run.font.size = Pt(font_size)
     run.font.color.rgb = RGBColor(*font_color)
@@ -34,11 +33,10 @@ def generate_docx(data, signer, task_details, output_path):
         if "{date}" in paragraph.text:
             paragraph.text = paragraph.text.replace("{date}", datetime.now().strftime("%d %B %Y"))
         for run in paragraph.runs:
-            set_font(run)  
-
+            set_font(run) 
     tables = template.tables
 
-    # Table 1: Header information (signer details)
+    # Table 1: Yang Bertanda Tangan
     header_table = tables[0]
     header_data = [
         signer['name'],
@@ -49,13 +47,13 @@ def generate_docx(data, signer, task_details, output_path):
     ]
 
     for i, value in enumerate(header_data):
-        if len(header_table.rows[i].cells) > 1: 
+        if len(header_table.rows[i].cells) > 1:  
             cell = header_table.cell(i, 2)
             cell.text = value
             for run in cell.paragraphs[0].runs:
                 set_font(run, bold=(i == 0))  
 
-    # Table 2: Assignments (dynamic member list)
+    # Table 2: Yang Bertugas
     assignments_table = tables[1]
     current_row_idx = 0
 
@@ -63,23 +61,23 @@ def generate_docx(data, signer, task_details, output_path):
     if len(assignments_table.rows[0].cells) < required_columns:
         messagebox.showerror(
             "Error",
-            "The assignments table must have at least 6 columns.",
+            "The table must have at least 6 columns.",
         )
         return
     
     field_names_translated = ["Nama", "NIP", "Pangkat/Golongan", "Jabatan", "Satuan Organisasi"]
     for row_idx, member in enumerate(data):
-        # Fill the first 5 rows if available, otherwise add rows dynamically
         for field_idx, field_name in enumerate(["name", "nip", "pangkat", "jabatan", "organization"]):
             if current_row_idx < len(assignments_table.rows):
                 row = assignments_table.rows[current_row_idx].cells
             else:
                 row = assignments_table.add_row().cells
             
-            row[0].text = str(row_idx + 1) if field_idx == 0 else "" 
+            row[0].text = str(row_idx + 1) if field_idx == 0 else ""
             row[1].text = field_names_translated[field_idx]
             row[2].text = ":"
             row[3].text = member[field_name]
+
             if field_name == "name":
                 row[3].text = member[field_name].title()  # Capitalize each word for names
             else:
@@ -108,7 +106,7 @@ def generate_docx(data, signer, task_details, output_path):
                 cell.text = ""
             current_row_idx += 1
 
-    # Table 3: Task details
+    # Table 3: Detail Tugas
     task_table = tables[2]
     task_table.cell(0, 2).text = task_details["tugas"]
     task_table.cell(1, 2).text = task_details["lama_perjalanan"]
@@ -120,7 +118,7 @@ def generate_docx(data, signer, task_details, output_path):
             for run in cell.paragraphs[0].runs:
                 set_font(run)
 
-    # Table 4: Signer details (repeated at the bottom)
+    # Table 4: Tanda Tangan
     footer_table = tables[3]
     current_month_year = datetime.now().strftime("%B %Y")
     footer_table.cell(0, 0).text = f"Jakarta,    {current_month_year}"
@@ -133,6 +131,144 @@ def generate_docx(data, signer, task_details, output_path):
                 set_font(run)
 
     template.save(output_path)
+def open_add_members_window():
+    def add_members():
+        name = name_entry.get().strip()
+        nip = nip_entry.get().strip()
+        pangkat = pangkat_entry.get().strip()
+        jabatan = jabatan_entry.get().strip()
+        organization = organization_entry.get().strip()
+
+        if not (name and nip and pangkat and jabatan and organization):
+            messagebox.showerror("Error", "All fields are required!")
+            return
+
+        new_member = {
+            "name": name,
+            "nip": nip,
+            "pangkat": pangkat,
+            "jabatan": jabatan,
+            "organization": organization,
+        }
+        members.append(new_member)
+        members_list.insert("end", f"{name} ({nip})")
+
+        save_members()
+        add_window.destroy()
+
+    
+    add_window = tk.Toplevel(root)
+    add_window.title("Tambah Anggota")
+    add_window.geometry("400x300")
+
+    frame = ttk.Frame(add_window)
+    frame.grid(pady=10, padx=10)
+
+    ttk.Label(frame, text="Nama:").grid(row=0, column=0, sticky="w")
+    name_entry = ttk.Entry(frame, width=40)
+    name_entry.grid(row=0, column=1, pady=5)
+
+    ttk.Label(frame, text="NIP:").grid(row=1, column=0, sticky="w")
+    nip_entry = ttk.Entry(frame, width=40)
+    nip_entry.grid(row=1, column=1, pady=5)
+
+    ttk.Label(frame, text="Pangkat:").grid(row=2, column=0, sticky="w")
+    pangkat_entry = ttk.Entry(frame, width=40)
+    pangkat_entry.grid(row=2, column=1, pady=5)
+
+    ttk.Label(frame, text="Jabatan:").grid(row=3, column=0, sticky="w")
+    jabatan_entry = ttk.Entry(frame, width=40)
+    jabatan_entry.grid(row=3, column=1, pady=5)
+
+    ttk.Label(frame, text="Satuan Kerja:").grid(row=4, column=0, sticky="w")
+    organization_entry = ttk.Entry(frame, width=40)
+    organization_entry.grid(row=4, column=1, pady=5)
+
+    add_button = ttk.Button(frame, text="Tambah", command=add_members)
+    add_button.grid(row=5, column=0, columnspan=2, pady=10)
+
+def edit_members():
+    selected_indices = members_list.curselection()
+    if not selected_indices or len(selected_indices) > 1:
+        messagebox.showerror("Error", "Please select exactly one member to edit!")
+        return
+
+    index = selected_indices[0]
+    member = members[index]
+
+    def update_member():
+        name = name_entry.get().strip()
+        nip = nip_entry.get().strip()
+        pangkat = pangkat_entry.get().strip()
+        jabatan = jabatan_entry.get().strip()
+        organization = organization_entry.get().strip()
+
+        if not (name and nip and pangkat and jabatan and organization):
+            messagebox.showerror("Error", "All fields are required!")
+            return
+
+      
+        members[index] = {
+            "name": name,
+            "nip": nip,
+            "pangkat": pangkat,
+            "jabatan": jabatan,
+            "organization": organization,
+        }
+
+        members_list.delete(index)
+        members_list.insert(index, f"{name} ({nip})")
+
+        save_members()
+        edit_window.destroy()
+
+    edit_window = tk.Toplevel(root)
+    edit_window.title("Edit Member")
+    edit_window.geometry("400x300")
+
+    frame = ttk.Frame(edit_window)
+    frame.grid(pady=10, padx=10)
+
+    ttk.Label(frame, text="Nama:").grid(row=0, column=0, sticky="w")
+    name_entry = ttk.Entry(frame, width=40)
+    name_entry.insert(0, member["name"])
+    name_entry.grid(row=0, column=1, pady=5)
+
+    ttk.Label(frame, text="NIP:").grid(row=1, column=0, sticky="w")
+    nip_entry = ttk.Entry(frame, width=40)
+    nip_entry.insert(0, member["nip"])
+    nip_entry.grid(row=1, column=1, pady=5)
+
+    ttk.Label(frame, text="Pangkat:").grid(row=2, column=0, sticky="w")
+    pangkat_entry = ttk.Entry(frame, width=40)
+    pangkat_entry.insert(0, member["pangkat"])
+    pangkat_entry.grid(row=2, column=1, pady=5)
+
+    ttk.Label(frame, text="Jabatan:").grid(row=3, column=0, sticky="w")
+    jabatan_entry = ttk.Entry(frame, width=40)
+    jabatan_entry.insert(0, member["jabatan"])
+    jabatan_entry.grid(row=3, column=1, pady=5)
+
+    ttk.Label(frame, text="Satuan Kerja:").grid(row=4, column=0, sticky="w")
+    organization_entry = ttk.Entry(frame, width=40)
+    organization_entry.insert(0, member["organization"])
+    organization_entry.grid(row=4, column=1, pady=5)
+
+    update_button = ttk.Button(frame, text="Update", command=update_member)
+    update_button.grid(row=5, column=0, columnspan=2, pady=10)
+
+def delete_members():
+    selected_indices = members_list.curselection()
+    if not selected_indices:
+        messagebox.showerror("Error", "No members selected for deletion!")
+        return
+
+    for idx in reversed(selected_indices):
+        members_list.delete(idx)
+        del members[idx]
+
+    save_members()
+    messagebox.showinfo("Success", "Selected members have been deleted.")
 
 def save_doc():
     selected_members = [members[idx] for idx in members_list.curselection()]
@@ -169,6 +305,7 @@ def save_doc():
     if file_path:
         generate_docx(selected_members, signer, task_details, file_path)
         messagebox.showinfo("Success", f"Document saved at {file_path}")
+
 
 def open_add_members_window():
     def search_and_add_member():
@@ -250,6 +387,9 @@ def delete_members():
 
     save_members()
     messagebox.showinfo("Success", "Selected members have been deleted.")
+
+root = tk.Tk()
+root.title("Surat Tugas Generator")
 
 root = tk.Tk()
 root.title("Surat Tugas Generator")
