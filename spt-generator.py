@@ -6,6 +6,7 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml.ns import qn
 from datetime import datetime
 import json
+import requests
 
 def load_members():
     try:
@@ -76,11 +77,25 @@ def generate_docx(data, signer, task_details, output_path):
             row[1].text = field_names_translated[field_idx]
             row[2].text = ":"
             row[3].text = member[field_name]
+<<<<<<< HEAD
+=======
+            if field_name == "name":
+                row[3].text = member[field_name].title()  # Capitalize each word for names
+            else:
+                row[3].text = member[field_name]
+            
+            # Center align the first column of the row
+>>>>>>> edit
             paragraph1 = row[0].paragraphs[0]
             paragraph1.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
             paragraph2 = row[2].paragraphs[0]
             paragraph2.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+<<<<<<< HEAD
  
+=======
+           
+
+>>>>>>> edit
             for cell in row:
                 for paragraph in cell.paragraphs:
                     paragraph.paragraph_format.line_spacing = Pt(12)  # Line spacing
@@ -127,6 +142,7 @@ def generate_docx(data, signer, task_details, output_path):
                 set_font(run)
 
     template.save(output_path)
+<<<<<<< HEAD
 def open_add_members_window():
     def add_members():
         name = name_entry.get().strip()
@@ -265,6 +281,8 @@ def delete_members():
 
     save_members()
     messagebox.showinfo("Success", "Selected members have been deleted.")
+=======
+>>>>>>> edit
 
 def save_doc():
     selected_members = [members[idx] for idx in members_list.curselection()]
@@ -303,6 +321,102 @@ def save_doc():
         generate_docx(selected_members, signer, task_details, file_path)
         messagebox.showinfo("Success", f"Document saved at {file_path}")
 
+<<<<<<< HEAD
+=======
+def open_add_members_window():
+    def search_and_add_member():
+        query = search_entry.get().strip().lower()
+        if not query:
+            messagebox.showerror("Error", "Please enter a search term!")
+            return
+
+        try:
+            # Fetch data from the API
+            response = requests.get("http://202.90.198.220/api/sdm/sdm-csv.bmkg")
+            response.raise_for_status()
+            data = response.text.splitlines()
+
+            # Filter results by query
+            results = []
+            for line in data:
+                fields = line.split(";")
+                if len(fields) >= 6 and query in fields[1].lower():
+                    results.append({
+                        "nip": fields[0].strip(),
+                        "name": fields[1].strip(),
+                        "pangkat": fields[3].strip(),
+                        "jabatan": fields[4].strip(),
+                        "organization": fields[5].strip()
+                    })
+
+            if not results:
+                messagebox.showinfo("No Results", "No matching members found.")
+                return
+
+            # Show results in a listbox for selection
+            result_list.delete(0, "end")
+            for idx, member in enumerate(results):
+                result_list.insert("end", f"{member['name']} ({member['nip']})")
+
+            # Store results globally for access during addition
+            global search_results
+            search_results = results
+        except requests.RequestException as e:
+            messagebox.showerror("Error", f"Failed to fetch data: {e}")
+
+    def add_selected_member():
+        selected_indices = result_list.curselection()
+        if not selected_indices:
+            messagebox.showerror("Error", "No member selected for addition!")
+            return
+
+        for idx in selected_indices:
+            new_member = search_results[idx]
+            members.append(new_member)
+            members_list.insert("end", f"{new_member['name']} ({new_member['nip']})")
+
+        save_members()
+        add_window.destroy()
+
+    # Create a new window for adding members
+    add_window = tk.Toplevel(root)
+    add_window.title("Add Member from API")
+    add_window.geometry("500x400")
+
+    frame = ttk.Frame(add_window)
+    frame.grid(pady=10, padx=10)
+
+    # Search section
+    ttk.Label(frame, text="Search Name:").grid(row=0, column=0, sticky="w")
+    search_entry = ttk.Entry(frame, width=40)
+    search_entry.grid(row=0, column=1, pady=5)
+
+    search_button = ttk.Button(frame, text="Search", command=search_and_add_member)
+    search_button.grid(row=0, column=2, padx=5)
+
+    # Results section
+    ttk.Label(frame, text="Results:").grid(row=1, column=0, sticky="w", pady=10)
+    result_list = tk.Listbox(frame, height=10, width=60, selectmode="multiple")
+    result_list.grid(row=2, column=0, columnspan=3, pady=5)
+
+    add_button = ttk.Button(frame, text="Add Selected", command=add_selected_member)
+    add_button.grid(row=3, column=0, columnspan=3, pady=10)
+
+def delete_members():
+    selected_indices = members_list.curselection()
+    if not selected_indices:
+        messagebox.showerror("Error", "No members selected for deletion!")
+        return
+
+    for idx in reversed(selected_indices):
+        members_list.delete(idx)
+        del members[idx]
+
+    save_members()
+    messagebox.showinfo("Success", "Selected members have been deleted.")
+
+# Initialize the main window
+>>>>>>> edit
 root = tk.Tk()
 root.title("Surat Tugas Generator")
 
@@ -321,22 +435,27 @@ task_frame.grid(row=3, column=0, padx=10, pady=5, sticky="w")
 ttk.Label(task_frame, text="Tugas:").grid(row=0, column=0, sticky="w")
 task_entry = ttk.Entry(task_frame, width=50)
 task_entry.grid(row=0, column=1, padx=5, pady=5)
+task_entry.insert(0, "Site Class for EEWS")  # Autofill text
 
 ttk.Label(task_frame, text="Lama Perjalanan:").grid(row=1, column=0, sticky="w")
 duration_entry = ttk.Entry(task_frame, width=50)
 duration_entry.grid(row=1, column=1, padx=5, pady=5)
+duration_entry.insert(0, "4 (empat) hari")  # Autofill text
 
 ttk.Label(task_frame, text="Lokasi:").grid(row=2, column=0, sticky="w")
 location_entry = ttk.Entry(task_frame, width=50)
 location_entry.grid(row=2, column=1, padx=5, pady=5)
+location_entry.insert(0, "Jawa Timur")  # Autofill text
 
 ttk.Label(task_frame, text="Tanggal Keberangkatan:").grid(row=3, column=0, sticky="w")
 departure_date_entry = ttk.Entry(task_frame, width=50)
 departure_date_entry.grid(row=3, column=1, padx=5, pady=5)
+departure_date_entry.insert(0, "1-7 Januari 2025")  # Autofill text
 
 ttk.Label(task_frame, text="Sumber Dana:").grid(row=4, column=0, sticky="w")
 funding_entry = ttk.Entry(task_frame, width=50)
 funding_entry.grid(row=4, column=1, padx=5, pady=5)
+funding_entry.insert(0, "DIPA BMKG TA 2025, Siteclass for EEWS")  # Autofill text
 
 # 3. List of Members Section
 ttk.Label(root, text="List Anggota:").grid(row=4, column=0, padx=10, pady=5, sticky="w")
@@ -355,19 +474,6 @@ tambah_anggota_button.grid(row=6, column=0, padx=10, pady=10, sticky="w")
 delete_members_button = ttk.Button(root, text="Hapus Anggota", command=delete_members)
 delete_members_button.grid(row=6, column=1, padx=10, pady=10, sticky="w")
 
-edit_members_button = ttk.Button(root, text="Edit Member", command=edit_members)
-edit_members_button.grid(row=7, column=0, padx=10, pady=10, sticky="w")
-
-# Add search bar to UI
-# search_frame = ttk.Frame(root)
-# search_frame.grid(row=6, column=0, padx=10, pady=5, sticky="w")
-
-# ttk.Label(search_frame, text="Search Members:").grid(row=0, column=0, sticky="w")
-# search_entry = ttk.Entry(search_frame, width=40)
-# search_entry.grid(row=0, column=1, padx=5)
-
-# search_button = ttk.Button(search_frame, text="Search", command=search_members)
-# search_button.grid(row=0, column=2, padx=5)
 
 # 6. Save Button
 save_button = ttk.Button(root, text="Save Document", command=save_doc)
